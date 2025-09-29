@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="et">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Suhkrutera · Lõunapakkumised</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card{border-radius:1rem;border:1px solid rgb(253 230 138);box-shadow:0 1px 8px rgba(0,0,0,.05)}
+    .qty{width:4.5rem}
+    .badge{border-radius:9999px;background:#f4f4f5;color:#111827;padding:.1rem .4rem;font-size:.75rem}
+    .icon{width:20px;height:20px;margin-top:2px}
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 text-zinc-900">
+  <main id="app" class="max-w-6xl mx-auto px-6 pt-10 pb-10">
+    <!-- Hero -->
+    <section class="flex flex-col items-center text-center gap-3 mb-6">
+      <div class="text-sm font-medium uppercase tracking-widest text-amber-700">Lõunapakkumised • Proovinädal</div>
+      <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">Teeme lõunal teie kõhu rõõmsaks</h1>
+      <p class="text-zinc-600 max-w-2xl">
+        Valmistame suure armastusega ja toome soojalt teieni. Meie eesmärk on ausad ja kvaliteetsed maitsed.
+        Kõik soolased toidud sisaldavad leiva/saia kuklit; Kõigil pearoogadel on iga päev lisandina värskendav salat.
+        Märgistused: <strong>T</strong> — taimne, <strong>V</strong> — vegan, <strong>GV</strong> — gluteenivaba, <strong>LV</strong> — laktoosivaba.
+      </p>
+    </section>
+
+    <!-- Menu grid -->
+    <section id="menu" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8"></section>
+
+    <!-- Checkout -->
+    <section class="max-w-3xl mx-auto">
+      <form id="orderForm" class="rounded-2xl border border-amber-200 bg-white/70 p-5 shadow-sm">
+        <h2 class="text-xl font-bold mb-3 flex items-center gap-2">✅ Kliendi andmed ja kinnitamine</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input id="name" placeholder="Nimi *" required class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <input id="phone" placeholder="Telefon *" required class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <input id="email" type="email" placeholder="E-post *" required class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <input id="pickup" placeholder="Kättesaamise aeg (nt 12:30)" class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <input id="company" placeholder="Ettevõtte nimi *" required class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+          <input id="address" placeholder="Aadress *" required class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+        </div>
+
+        <textarea id="notes" placeholder="Märkused (nt erisoovid)" class="mt-3 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" rows="3"></textarea>
+
+        <div id="err" class="hidden mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
+        <div id="ok" class="hidden mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Tellimus vastu võetud! Kinnitame e-posti/telefoniga. 🙌</div>
+
+        <div class="mt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div class="text-sm text-zinc-700">
+            <div>Kokku (sh komplektid): <strong id="grand">€0.00</strong></div>
+            <div class="text-zinc-500 text-xs">Komplekt = supp + praad (liha või taimne) + magustoit @ €14.00.</div>
+          </div>
+          <button id="submitBtn" type="submit" class="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-500/90 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-amber-300">
+            Kinnita ja saada
+          </button>
+        </div>
+
+        <p class="mt-2 text-xs text-zinc-500">Pärast saatmist kuvatakse kinnitus siin samal lehel.</p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+  // ---------- KONFIG ----------
+  const GETFORM_ENDPOINT = "https://getform.io/f/avrmjgxa";
+  const PRICE = { soup: 4.5, mainMeat: 7.5, mainVeg: 7.0, dessert: 4.0, salad: 6.5, combo: 14.0 };
+  const days = [
+    { name:"Esmaspäev", soup:"Pikantne tomatisupp suitsujuustuga", main:"BBQ rebitud liha rosmariinikartuliga", veg:"Kreemine seenepasta ürtide ja parmesaniga", vegTags:["T"], dessert:"Eestimaine õuna-kohupiima kook" },
+    { name:"Teisipäev", soup:"Metsahõnguline seenesupp", main:"Ürdi-sidruni kastmes lõhe köögiviljariisiga", veg:"Bataadi-kikerherne karri jasmiiniriisiga", vegTags:["V","GV"], dessert:"Mooni-šokolaadi saiake", dessertTags:["T","GV"] },
+    { name:"Kolmapäev", soup:"Autentne Tom Kha kanaga", main:"Rohumaaveise lasanje", veg:"Köögiviljanuudlid seesami ja koriandriga", vegTags:["V"], dessert:"Pavlova passionikreemi ja värskete marjadega", dessertTags:["T"] },
+    { name:"Neljapäev", soup:"Frikadellisupp", main:"Burgundia pada röstitud juurviljadega", veg:"Köögivilja lasanje tomatatises ricotta kastmes", vegTags:["T"], dessert:"Sidrunitort", dessertTags:["T"] },
+    { name:"Reede", soup:"Kosutav kõrvitsapüreesupp balsamicoga", main:"Krõbekana steakhouse friikartulite ja ürdimajoneesiga", mainTags:["GV","LV"], veg:"Pasta Alfredo spinati ja päikesekuivatatud tomatitega", vegTags:["T"], dessert:"Pidulik kaneelisai" }
+  ];
+  const dailyExtras = [{ label:"Avokaado salat halloumi juustu ja granaatõunaga", day:"Reede", key:"extra_salat" }];
+
+  // ---------- ABID ----------
+  const eur = n => new Intl.NumberFormat("et-EE",{style:"currency",currency:"EUR",minimumFractionDigits:2}).format(n);
+  const qty = {}; // "Päev|Rida" -> number
+
+  function computePrice(qty) {
+    const byDay = {};
+    days.forEach(d=>{
+      const keyCombo = `${d.name}|Komplekt`;
+      const keySoup  = `${d.name}|Supp`;
+      const keyMeat  = `${d.name}|Pearoog`;
+      const keyVeg   = `${d.name}|Taimne`;
+      const keyDess  = `${d.name}|Magustoit`;
+      const combo = Math.max(0, qty[keyCombo]||0);
+      const leftovers = {
+        soup: Math.max(0, qty[keySoup]||0),
+        meat: Math.max(0, qty[keyMeat]||0),
+        veg:  Math.max(0, qty[keyVeg]||0),
+        dessert: Math.max(0, qty[keyDess]||0),
+      };
+      const sum = combo*PRICE.combo + leftovers.soup*PRICE.soup + leftovers.meat*PRICE.mainMeat + leftovers.veg*PRICE.mainVeg + leftovers.dessert*PRICE.dessert;
+      byDay[d.name] = { combo, leftovers, sum };
+    });
+    const saladKey = `Reede|Lisaks: ${dailyExtras[0].label}`;
+    const saladQ = qty[saladKey]||0;
+    const dayTotals = Object.values(byDay).reduce((a,v)=>a+v.sum,0);
+    const grand = dayTotals + saladQ*PRICE.salad;
+    return { byDay, saladQ, dayTotals, grand };
+  }
+
+  function renderMenu(){
+    const root = document.getElementById("menu");
+    root.innerHTML = "";
+    days.forEach(d=>{
+      const card = document.createElement("div");
+      card.className = "card bg-white/80 p-4";
+      const header = `
+        <div class="pb-2 border-b border-amber-100 mb-3 flex items-center justify-between">
+          <span class="text-xl font-bold">${d.name}</span>
+          <span class="text-amber-700/90 text-sm font-medium">Lõunamenüü</span>
+        </div>`;
+      const base = [
+        { label:"Supp",       val:d.soup,    price:PRICE.soup },
+        { label:"Pearoog",    val:d.main,    price:PRICE.mainMeat, tags:d.mainTags },
+        { label:"Taimne",     val:d.veg,     price:PRICE.mainVeg,  tags:d.vegTags },
+        { label:"Magustoit",  val:d.dessert, price:PRICE.dessert,  tags:d.dessertTags },
+      ];
+      const rows = [...base];
+      if (d.name==="Reede"){
+        rows.push({ label:"Salat", val:dailyExtras[0].label, price:PRICE.salad, extraKey:`Reede|Lisaks: ${dailyExtras[0].label}` });
+      }
+      rows.push({ label:"Komplekt", val:"Supp + praad (liha või taimne) + magustoit", price:PRICE.combo });
+
+      const lines = rows.map(row=>{
+        const key = row.extraKey ? row.extraKey : `${d.name}|${row.label}`;
+        const tags = (row.tags||[]).map(t=>`<span class="badge">${t}</span>`).join(" ");
+        const value = qty[key] ?? 0;
+        return `
+          <div class="flex items-start gap-3 mb-3">
+            <div class="flex-1">
+              <div class="font-semibold flex items-center gap-2">
+                ${row.label}
+                <div class="flex gap-1">${tags}</div>
+                <span class="ml-auto text-sm font-normal text-amber-700">${eur(row.price)}</span>
+              </div>
+              <div class="text-sm text-zinc-700">${row.val}</div>
+            </div>
+            <div class="shrink-0 flex items-center gap-2">
+              <label class="text-xs text-zinc-600" for="qty_${key}">tk</label>
+              <input id="qty_${key}" type="number" min="0" max="999" value="${value}" class="qty rounded-lg border border-amber-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            </div>
+          </div>`;
+      }).join("");
+
+      const dSum = computePrice(qty).byDay[d.name];
+      const parts = [];
+      if (dSum?.combo) parts.push(`Komplektid × ${dSum.combo}`);
+      if (dSum?.leftovers?.soup) parts.push(`Supp × ${dSum.leftovers.soup}`);
+      if (dSum?.leftovers?.meat) parts.push(`Lihaga praad × ${dSum.leftovers.meat}`);
+      if (dSum?.leftovers?.veg)  parts.push(`Lihata praad × ${dSum.leftovers.veg}`);
+      if (dSum?.leftovers?.dessert) parts.push(`Magustoit × ${dSum.leftovers.dessert}`);
+
+      const footer = `
+        <div class="mt-3 rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-sm text-amber-900 flex items-center justify-between">
+          <span>${parts.length ? parts.join(" · ") : "Pole valikuid"}</span>
+          <strong>${eur(dSum?.sum || 0)}</strong>
+        </div>`;
+
+      card.innerHTML = header + lines + footer;
+      root.appendChild(card);
+    });
+
+    // lisame kuulajad
+    root.querySelectorAll("input[id^='qty_']").forEach(inp=>{
+      inp.addEventListener("input", (e)=>{
+        const id = e.target.id.substring(4);
+        let v = parseInt(e.target.value||"0",10);
+        if (isNaN(v) || v<0) v=0;
+        qty[id]=v;
+        updateTotals();
+        renderMenu(); // värskenda päevakokkuvõtteid
+      });
+    });
+  }
+
+  function updateTotals(){
+    const { grand } = computePrice(qty);
+    document.getElementById("grand").textContent = eur(grand);
+  }
+
+  // Submit
+  document.getElementById("orderForm").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const err = document.getElementById("err");
+    const ok  = document.getElementById("ok");
+    err.classList.add("hidden");
+    ok.classList.add("hidden");
+
+    // valideeri vähemalt üks kogus
+    const hasQty = Object.values(qty).some(n => (n||0) > 0);
+    if (!hasQty){ err.textContent = "Palun vali vähemalt üks kogus."; err.classList.remove("hidden"); return; }
+
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const pickup = document.getElementById("pickup").value.trim();
+    const company = document.getElementById("company").value.trim();
+    const address = document.getElementById("address").value.trim();
+    const notes = document.getElementById("notes").value.trim();
+
+    // kokkuvõte
+    const pb = computePrice(qty);
+    const lines = [];
+    Object.keys(pb.byDay).forEach(day=>{
+      const d = pb.byDay[day];
+      if (d.combo || d.leftovers.soup || d.leftovers.meat || d.leftovers.veg || d.leftovers.dessert){
+        lines.push(`${day}:`);
+        if (d.combo) lines.push(`  • Komplektid × ${d.combo} @ ${eur(PRICE.combo)}`);
+        if (d.leftovers.soup) lines.push(`  • Supp × ${d.leftovers.soup} @ ${eur(PRICE.soup)}`);
+        if (d.leftovers.meat) lines.push(`  • Lihaga praad × ${d.leftovers.meat} @ ${eur(PRICE.mainMeat)}`);
+        if (d.leftovers.veg)  lines.push(`  • Lihata praad × ${d.leftovers.veg} @ ${eur(PRICE.mainVeg)}`);
+        if (d.leftovers.dessert) lines.push(`  • Magustoit × ${d.leftovers.dessert} @ ${eur(PRICE.dessert)}`);
+        lines.push(`  = ${eur(d.sum)}`);
+      }
+    });
+    if (pb.saladQ){
+      lines.push(`Reede lisaks: Salat × ${pb.saladQ} @ ${eur(PRICE.salad)} = ${eur(pb.saladQ*PRICE.salad)}`);
+    }
+    const summary = lines.join("\n");
+
+    // saadame
+    try{
+      document.getElementById("submitBtn").disabled = true;
+      const fd = new FormData();
+      fd.append("recipient","info@suhkrutera.ee");
+      fd.append("subject","Lõunatellimus – Suhkrutera");
+      fd.append("customer_name",name);
+      fd.append("customer_phone",phone);
+      fd.append("customer_email",email);
+      fd.append("company_name",company);
+      fd.append("company_address",address);
+      fd.append("pickup_time",pickup);
+      fd.append("notes",notes);
+      fd.append("order_summary",summary);
+      fd.append("order_total_eur", String(pb.grand.toFixed(2)));
+      Object.entries(qty).forEach(([k,n])=>{ if((n||0)>0) fd.append(k.replaceAll(" ","_").toLowerCase(), String(n)); });
+
+      const resp = await fetch(GETFORM_ENDPOINT,{ method:"POST", body:fd });
+      if(!resp.ok) throw new Error("Viga: "+resp.status);
+      ok.classList.remove("hidden");
+      // reset
+      Object.keys(qty).forEach(k=>qty[k]=0);
+      document.querySelectorAll("input[id^='qty_']").forEach(i=>i.value=0);
+      updateTotals();
+    }catch(e){
+      err.textContent = "Saatmine ebaõnnestus. Kontrolli netti või proovi uuesti.";
+      err.classList.remove("hidden");
+    }finally{
+      document.getElementById("submitBtn").disabled = false;
+    }
+  });
+
+  // init
+  renderMenu();
+  updateTotals();
+  </script>
+</body>
+</html>
